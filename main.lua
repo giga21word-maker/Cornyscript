@@ -1,49 +1,64 @@
--- main.lua (ESP Edition)
-if getgenv().ESPLoaded then 
-    print("ESP is already running.")
+-- main.lua (Advanced ESP)
+if getgenv().CornyESP then 
+    print("ESP already active. Use the toggle to change state.")
     return 
 end
-getgenv().ESPLoaded = true
 
+getgenv().CornyESP = true
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- Function to create the ESP Highlight
-local function createESP(player)
-    -- We wait for the character to exist
-    player.CharacterAdded:Connect(function(character)
-        if not character:FindFirstChild("ESPHighlight") then
-            local highlight = Instance.new("Highlight")
-            highlight.Name = "ESPHighlight"
-            highlight.Parent = character
-            highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Red color
-            highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- White outline
-            highlight.FillTransparency = 0.5
-            highlight.OutlineTransparency = 0
-        end
-    end)
-    
-    -- If they already have a character loaded
-    if player.Character then
+-- Configuration Table (Easy to change later)
+local Settings = {
+    Enabled = true,
+    EnemyColor = Color3.fromRGB(255, 0, 0), -- Red
+    TeamColor = Color3.fromRGB(0, 255, 0),  -- Green
+    TeamCheck = true,
+    FillTransparency = 0.5,
+    OutlineTransparency = 0
+}
+
+local function applyHighlight(player)
+    local function create()
+        local char = player.Character or player.CharacterAdded:Wait()
+        -- Prevent duplicates
+        local old = char:FindFirstChild("CornyHighlight")
+        if old then old:Destroy() end
+
         local highlight = Instance.new("Highlight")
-        highlight.Name = "ESPHighlight"
-        highlight.Parent = player.Character
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.FillTransparency = 0.5
+        highlight.Name = "CornyHighlight"
+        highlight.Parent = char
+        
+        -- Logic for Team Check
+        if Settings.TeamCheck and player.Team == LocalPlayer.Team then
+            highlight.FillColor = Settings.TeamColor
+        else
+            highlight.FillColor = Settings.EnemyColor
+        end
+
+        highlight.FillTransparency = Settings.FillTransparency
+        highlight.OutlineTransparency = Settings.OutlineTransparency
+        highlight.Enabled = Settings.Enabled
+    end
+    
+    create()
+    player.CharacterAdded:Connect(create)
+end
+
+-- Initialize for all players
+for _, p in pairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then
+        task.spawn(applyHighlight, p)
     end
 end
 
--- Apply to all current players
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        createESP(player)
-    end
-end
+Players.PlayerAdded:Connect(applyHighlight)
 
--- Apply to any new players who join
-Players.PlayerAdded:Connect(function(player)
-    createESP(player)
-end)
+print("Advanced ESP Loaded. Team Check: " .. tostring(Settings.TeamCheck))
 
-print("ESP Script Loaded Successfully.")
+-- Notify user
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "CornyScript",
+    Text = "Advanced ESP Loaded",
+    Duration = 3
+})
