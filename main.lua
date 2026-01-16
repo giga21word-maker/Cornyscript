@@ -1,6 +1,5 @@
 -- main.lua
 if getgenv().CornyHubLoaded then 
-    -- If already loaded, we just refresh the UI
     local old = game:GetService("CoreGui"):FindFirstChild("CornyHub")
     if old then old:Destroy() end
 end
@@ -13,7 +12,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local ESP_Enabled = false
 local Fly_Enabled = false
-local FlySpeed = 50
+local FlySpeed = 60
 
 -- GUI SETUP
 local ScreenGui = Instance.new("ScreenGui")
@@ -21,12 +20,11 @@ ScreenGui.Name = "CornyHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- Helper to make buttons
 local function createButton(name, text, pos, color)
     local btn = Instance.new("TextButton")
     btn.Name = name
     btn.Parent = ScreenGui
-    btn.Size = UDim2.new(0, 100, 0, 40)
+    btn.Size = UDim2.new(0, 120, 0, 40)
     btn.Position = pos
     btn.BackgroundColor3 = color
     btn.Text = text
@@ -36,35 +34,42 @@ local function createButton(name, text, pos, color)
     btn.Draggable = true
     btn.Active = true
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = btn
     return btn
 end
 
-local ESPBtn = createButton("ESPBtn", "ESP: OFF", UDim2.new(0.1, 0, 0.1, 0), Color3.fromRGB(150, 0, 0))
-local FlyBtn = createButton("FlyBtn", "FLY: OFF", UDim2.new(0.1, 0, 0.1, 50), Color3.fromRGB(0, 0, 150))
+local ESPBtn = createButton("ESPBtn", "ESP: OFF", UDim2.new(0.05, 0, 0.4, 0), Color3.fromRGB(180, 50, 50))
+local FlyBtn = createButton("FlyBtn", "FLY: OFF", UDim2.new(0.05, 0, 0.4, 50), Color3.fromRGB(50, 50, 180))
 
--- ESP LOGIC
-RunService.RenderStepped:Connect(function()
+-- FIX: ESP CLEANUP LOGIC
+local function clearESP()
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local highlight = player.Character:FindFirstChild("CornyHighlight")
-            if ESP_Enabled then
-                if not highlight then
-                    highlight = Instance.new("Highlight")
-                    highlight.Name = "CornyHighlight"
-                    highlight.Parent = player.Character
-                    highlight.FillColor = Color3.new(1, 0, 0)
+        if player.Character then
+            local h = player.Character:FindFirstChild("CornyHighlight")
+            if h then h:Destroy() end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if ESP_Enabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local h = player.Character:FindFirstChild("CornyHighlight")
+                if not h then
+                    h = Instance.new("Highlight")
+                    h.Name = "CornyHighlight"
+                    h.Parent = player.Character
+                    h.FillColor = Color3.new(1, 0, 0)
                 end
-                highlight.Enabled = true
-            else
-                if highlight then highlight.Enabled = false end
             end
         end
+    else
+        clearESP()
     end
 end)
 
--- FLY LOGIC (Fixed)
+-- FIX: STABLE FLY LOGIC
 local bv, bg
 RunService.Heartbeat:Connect(function()
     if Fly_Enabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -79,7 +84,7 @@ RunService.Heartbeat:Connect(function()
             bg.P = 9e4
         end
         
-        hum.PlatformStand = true -- Prevents falling animations
+        hum.PlatformStand = true
         bg.CFrame = workspace.CurrentCamera.CFrame
         
         local moveDir = Vector3.new(0,0,0)
@@ -100,15 +105,15 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Button Click Events
+-- BUTTON EVENTS
 ESPBtn.MouseButton1Click:Connect(function()
     ESP_Enabled = not ESP_Enabled
     ESPBtn.Text = ESP_Enabled and "ESP: ON" or "ESP: OFF"
-    ESPBtn.BackgroundColor3 = ESP_Enabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+    ESPBtn.BackgroundColor3 = ESP_Enabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
 end)
 
 FlyBtn.MouseButton1Click:Connect(function()
     Fly_Enabled = not Fly_Enabled
     FlyBtn.Text = Fly_Enabled and "FLY: ON" or "FLY: OFF"
-    FlyBtn.BackgroundColor3 = Fly_Enabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(0, 0, 150)
+    FlyBtn.BackgroundColor3 = Fly_Enabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(50, 50, 180)
 end)
