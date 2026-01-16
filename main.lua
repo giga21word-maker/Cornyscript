@@ -1,106 +1,124 @@
--- Force reset the loaded state to ensure the new code runs
-getgenv().CornyHubLoaded = nil 
+-- main.lua (Advanced Bypass Edition)
+if getgenv().CornyLoaded then getgenv().CornyCleanup() end
+getgenv().CornyLoaded = true
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
--- Cleanup old GUI if it exists
-local oldGui = game:GetService("CoreGui"):FindFirstChild("CornyHub") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("CornyHub")
-if oldGui then oldGui:Destroy() end
+-- Configuration (Optimized)
+local Settings = {
+    ESP = false,
+    Fly = false,
+    FlySpeed = 2, -- CFrame units
+    Noclip = false
+}
 
-local ESP_Enabled = false
-local Fly_Enabled = false
-local FlySpeed = 50
+-- Bypass: Use a metatable hook to hide property changes if the game tries to index them
+local Raw = getrawmetatable(game)
+setreadonly(Raw, false)
+local OldIndex = Raw.__index
+Raw.__index = newcclosure(function(Self, Key)
+    if not checkcaller() and Settings.Fly and Self:IsA("Humanoid") and (Key == "WalkSpeed" or Key == "JumpPower") then
+        return 16 -- Return default values to the server/anti-cheat
+    end
+    return OldIndex(Self, Key)
+end)
+setreadonly(Raw, true)
 
 -- UI Setup
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CornyHub"
-ScreenGui.Parent = game:GetService("CoreGui") 
-ScreenGui.ResetOnSpawn = false
+local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+ScreenGui.Name = "CornySystem"
 
-local function createBtn(name, text, pos, color)
-    local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Parent = ScreenGui
-    btn.Size = UDim2.new(0, 120, 0, 40)
+local function createToggle(name, text, pos)
+    local btn = Instance.new("TextButton", ScreenGui)
+    btn.Size = UDim2.new(0, 140, 0, 35)
     btn.Position = pos
-    btn.BackgroundColor3 = color
-    btn.Text = text
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.SourceSansBold
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    btn.BorderSizePixel = 0
+    btn.Text = text .. ": OFF"
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
     btn.TextSize = 14
     btn.Draggable = true
     btn.Active = true
-    Instance.new("UICorner", btn)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     return btn
 end
 
-local ESPBtn = createBtn("ESPBtn", "ESP: OFF", UDim2.new(0.1, 0, 0.2, 0), Color3.fromRGB(150, 0, 0))
-local FlyBtn = createBtn("FlyBtn", "FLY: OFF", UDim2.new(0.1, 0, 0.2, 50), Color3.fromRGB(0, 0, 150))
+local EBtn = createToggle("E", "ESP", UDim2.new(0.05, 0, 0.3, 0))
+local FBtn = createToggle("F", "FLY/NOCLIP", UDim2.new(0.05, 0, 0.3, 40))
 
--- ESP Logic
-RunService.RenderStepped:Connect(function()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local highlight = player.Character:FindFirstChild("CornyHighlight")
-            if ESP_Enabled then
+-- Advanced ESP (Fast Task Scheduling)
+local function UpdateESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local root = p.Character:FindFirstChild("HumanoidRootPart")
+            local highlight = p.Character:FindFirstChild("CornyHigh")
+            
+            if Settings.ESP and root then
                 if not highlight then
-                    highlight = Instance.new("Highlight", player.Character)
-                    highlight.Name = "CornyHighlight"
-                    highlight.FillColor = Color3.new(1, 0, 0)
+                    highlight = Instance.new("Highlight", p.Character)
+                    highlight.Name = "CornyHigh"
+                    highlight.OutlineTransparency = 0
+                    highlight.FillTransparency = 0.6
                 end
-                highlight.Enabled = true
+                highlight.FillColor = (p.Team ~= LocalPlayer.Team) and Color3.new(1, 0, 0) or Color3.new(0, 1, 0)
             elseif highlight then
                 highlight:Destroy()
             end
         end
     end
-end)
+end
 
--- Fly Logic (Aggressive Fix)
-local bodyVel, bodyGyro
-RunService.Heartbeat:Connect(function()
+-- Advanced Fly (CFrame Method - Bypasses Velocity Checks)
+RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp then return end
 
-    if Fly_Enabled and hrp and hum then
-        if not bodyVel then
-            bodyVel = Instance.new("BodyVelocity", hrp)
-            bodyVel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-            bodyGyro = Instance.new("BodyGyro", hrp)
-            bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    if Settings.Fly then
+        -- Noclip Logic: Disable collision for all body parts
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
         end
-        
-        hum.PlatformStand = true
-        bodyGyro.CFrame = workspace.CurrentCamera.CFrame
-        
-        local moveDir = Vector3.new(0,0,0)
+
         local cam = workspace.CurrentCamera.CFrame
+        local move = Vector3.new(0,0,0)
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + cam.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - cam.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - cam.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + cam.RightVector end
         
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.RightVector end
-        
-        bodyVel.Velocity = moveDir * FlySpeed
-    else
-        if bodyVel then bodyVel:Destroy() bodyVel = nil end
-        if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
-        if hum then hum.PlatformStand = false end
+        -- Use CFrame instead of Velocity (Harder for Anti-Cheat to track)
+        hrp.Velocity = Vector3.new(0, 0.1, 0) -- Tiny velocity to stay "grounded" in game logic
+        hrp.CFrame = hrp.CFrame + (move * Settings.FlySpeed)
     end
 end)
 
-ESPBtn.MouseButton1Click:Connect(function()
-    ESP_Enabled = not ESP_Enabled
-    ESPBtn.Text = ESP_Enabled and "ESP: ON" or "ESP: OFF"
-    ESPBtn.BackgroundColor3 = ESP_Enabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+-- Button Logic
+EBtn.MouseButton1Click:Connect(function()
+    Settings.ESP = not Settings.ESP
+    EBtn.Text = "ESP: " .. (Settings.ESP and "ON" or "OFF")
+    EBtn.BackgroundColor3 = Settings.ESP and Color3.fromRGB(40, 120, 40) or Color3.fromRGB(20, 20, 20)
 end)
 
-FlyBtn.MouseButton1Click:Connect(function()
-    Fly_Enabled = not Fly_Enabled
-    FlyBtn.Text = Fly_Enabled and "FLY: ON" or "FLY: OFF"
-    FlyBtn.BackgroundColor3 = Fly_Enabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(0, 0, 150)
+FBtn.MouseButton1Click:Connect(function()
+    Settings.Fly = not Settings.Fly
+    FBtn.Text = "FLY/NOCLIP: " .. (Settings.Fly and "ON" or "OFF")
+    FBtn.BackgroundColor3 = Settings.Fly and Color3.fromRGB(40, 120, 40) or Color3.fromRGB(20, 20, 20)
 end)
+
+RunService.Heartbeat:Connect(UpdateESP)
+
+getgenv().CornyCleanup = function()
+    ScreenGui:Destroy()
+    Settings.Fly = false
+    Settings.ESP = false
+    getgenv().CornyLoaded = false
+end
