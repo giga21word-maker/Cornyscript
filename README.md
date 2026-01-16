@@ -1,0 +1,2 @@
+# Cornyscript
+hello worlx
