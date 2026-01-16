@@ -1,2 +1,2 @@
 # Cornyscript
-hello worlx
+hello world
