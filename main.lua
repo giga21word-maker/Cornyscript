@@ -1,6 +1,6 @@
--- // CHRONOS SENTINEL V4.0 LEGENDS EDITION //
--- STATUS: Kinetic Core + Legends Protocol + Tab System
--- FEATURES: Moon-Jump, Void-Lock, Mobile-Fling, Orb-Link, Rebirth-Cycle
+-- // CHRONOS SENTINEL V4.1 LEGENDS ELITE //
+-- STATUS: Kinetic Core + Hyper-Legends Protocol + Tab System
+-- FEATURES: Void-Lock, Mobile-Fling, Omni-Hoops, Gem-Sniper, Rebirth-Cycle
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -11,28 +11,24 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
--- // 1. PREMIUM CONFIGURATION //
+-- // 1. ELITE CONFIGURATION //
 local CHRONOS_SETTINGS = {
     -- Kinetic Core
-    EGOR_MODE = false,
     FLING_MODE = false,
-    WALK_SPEED = 4,
-    ANIM_MULTIPLIER = 25,
     FLING_STRENGTH = 999999,
-    MOON_GRAVITY = 45,
     NORMAL_GRAVITY = 196.2,
-    EGOR_JUMP_POWER = 18, 
     
     -- Legends Core
     AUTO_ORBS = false,
+    AUTO_GEMS = false, -- New Feature
     AUTO_REBIRTH = false,
     AUTO_HOOPS = false,
-    FARM_SPEED = 0.1, -- Speed of orb collection
+    FARM_SPEED = 0, -- Set to 0 for Hyper-Speed (Instant)
     
     -- UI State
     UI_OPEN = true,
     MINIMIZED = false,
-    CURRENT_TAB = "Movement", -- "Movement" or "Legends"
+    CURRENT_TAB = "Movement", 
     ACCENT_COLOR = Color3.fromRGB(0, 255, 180),
     ACTIVE = true
 }
@@ -44,9 +40,7 @@ local Internal = {
     CurrentChar = nil,
     CurrentRoot = nil,
     CurrentHum = nil,
-    InitialLoad = false,
-    OrbLoop = nil,
-    RebirthLoop = nil
+    InitialLoad = false
 }
 
 -- // 2. THE LOADINGSTRING (FLETCHER) //
@@ -60,7 +54,7 @@ if not _G.ChronosLoaded then
     end)
 end
 
--- // 3. CORE UTILITIES (UPGRADED) //
+-- // 3. CORE UTILITIES //
 local function UpdateCharacterRefs(char)
     if not char then return end
     Internal.CurrentChar = char
@@ -75,24 +69,15 @@ LocalPlayer.CharacterAdded:Connect(UpdateCharacterRefs)
 
 local function FullReset()
     workspace.Gravity = CHRONOS_SETTINGS.NORMAL_GRAVITY
-    if Internal.CurrentHum then
-        Internal.CurrentHum.WalkSpeed = 16
-        Internal.CurrentHum.JumpPower = 50
-        Internal.CurrentHum.UseJumpPower = false
-        local animator = Internal.CurrentHum:FindFirstChildOfClass("Animator")
-        if animator then
-            for _, track in pairs(animator:GetPlayingAnimationTracks()) do
-                track:AdjustSpeed(1)
-            end
-        end
-    end
     -- Reset Legends Toggles
     CHRONOS_SETTINGS.AUTO_ORBS = false
+    CHRONOS_SETTINGS.AUTO_GEMS = false
     CHRONOS_SETTINGS.AUTO_REBIRTH = false
     CHRONOS_SETTINGS.AUTO_HOOPS = false
+    CHRONOS_SETTINGS.FLING_MODE = false
 end
 
--- // 4. STABILIZED FLING ENGINE (V3.7 HYBRID) //
+-- // 4. STABILIZED FLING ENGINE //
 local function ManageFling(state)
     if not Internal.CurrentRoot then return end
     local spin = Internal.CurrentRoot:FindFirstChild("UltraSpin")
@@ -126,19 +111,39 @@ local function ManageFling(state)
     end
 end
 
--- // 5. LEGENDS PROTOCOLS (NEW) //
+-- // 5. HYPER-LEGENDS PROTOCOLS //
 local function LegendsFarm()
+    -- Hyper-Speed Orb Collector
     task.spawn(function()
         while CHRONOS_SETTINGS.ACTIVE do
             if CHRONOS_SETTINGS.AUTO_ORBS then
                 local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
                 if rEvents and rEvents:FindFirstChild("orbEvent") then
-                    local orbs = {"Red Orb", "Yellow Orb", "Gem", "Blue Orb", "Orange Orb"}
+                    local orbs = {"Red Orb", "Yellow Orb", "Blue Orb", "Orange Orb"}
+                    local locations = {"City", "Snow City", "Magma City", "Space", "Desert", "Jungle"}
+                    
                     for _, orb in pairs(orbs) do
                         if not CHRONOS_SETTINGS.AUTO_ORBS then break end
-                        rEvents.orbEvent:FireServer("collectOrb", orb, "City")
-                        rEvents.orbEvent:FireServer("collectOrb", orb, "Snow City")
-                        rEvents.orbEvent:FireServer("collectOrb", orb, "Magma City")
+                        for _, loc in pairs(locations) do
+                            rEvents.orbEvent:FireServer("collectOrb", orb, loc)
+                        end
+                    end
+                end
+            end
+            task.wait(CHRONOS_SETTINGS.FARM_SPEED) -- Now runs effectively instantly
+        end
+    end)
+
+    -- Dedicated Gem Sniper
+    task.spawn(function()
+        while CHRONOS_SETTINGS.ACTIVE do
+            if CHRONOS_SETTINGS.AUTO_GEMS then
+                local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+                if rEvents and rEvents:FindFirstChild("orbEvent") then
+                    local locations = {"City", "Snow City", "Magma City", "Space", "Desert", "Jungle"}
+                    for _, loc in pairs(locations) do
+                         if not CHRONOS_SETTINGS.AUTO_GEMS then break end
+                         rEvents.orbEvent:FireServer("collectOrb", "Gem", loc)
                     end
                 end
             end
@@ -146,6 +151,7 @@ local function LegendsFarm()
         end
     end)
 
+    -- Rebirth Cycle
     task.spawn(function()
         while CHRONOS_SETTINGS.ACTIVE do
             if CHRONOS_SETTINGS.AUTO_REBIRTH then
@@ -154,30 +160,31 @@ local function LegendsFarm()
                     rEvents.rebirthEvent:FireServer("rebirthRequest")
                 end
             end
-            task.wait(1)
+            task.wait(0.5)
         end
     end)
     
+    -- Omni-Hoop Collector (All Worlds)
     task.spawn(function()
         while CHRONOS_SETTINGS.ACTIVE do
-            if CHRONOS_SETTINGS.AUTO_HOOPS then
-                 -- Physical Hoop Collection (Most reliable for LoS)
-                if workspace:FindFirstChild("Hoops") and Internal.CurrentRoot then
-                    for _, hoop in pairs(workspace.Hoops:GetChildren()) do
-                        if not CHRONOS_SETTINGS.AUTO_HOOPS then break end
-                        if hoop:IsA("MeshPart") or hoop:IsA("Part") then
-                             firetouchinterest(Internal.CurrentRoot, hoop, 0)
-                             firetouchinterest(Internal.CurrentRoot, hoop, 1)
-                        end
+            if CHRONOS_SETTINGS.AUTO_HOOPS and Internal.CurrentRoot then
+                -- Scans entire workspace to find hoops in any folder
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if not CHRONOS_SETTINGS.AUTO_HOOPS then break end
+                    if obj.Name == "Hoop" or obj.Name == "Ring" then
+                         if obj:IsA("MeshPart") or obj:IsA("Part") then
+                             firetouchinterest(Internal.CurrentRoot, obj, 0)
+                             firetouchinterest(Internal.CurrentRoot, obj, 1)
+                         end
                     end
                 end
             end
-            task.wait(0.5)
+            task.wait(0.1) -- Fast scan
         end
     end)
 end
 
--- // 6. ADVANCED GUI (V4.0 DUAL-CORE) //
+-- // 6. ELITE GUI (V4.1) //
 local function BuildUI()
     if CoreGui:FindFirstChild("ChronosUltra") then CoreGui.ChronosUltra:Destroy() end
     
@@ -187,7 +194,7 @@ local function BuildUI()
 
     local Main = Instance.new("Frame", Screen)
     Main.Name = "Main"
-    Main.Size = UDim2.new(0, 240, 0, 220) -- Expanded for Tabs
+    Main.Size = UDim2.new(0, 240, 0, 260) -- Increased height for new buttons
     Main.Position = UDim2.new(0.5, -120, 0.3, 0)
     Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     Main.BorderSizePixel = 0
@@ -208,7 +215,7 @@ local function BuildUI()
     local Title = Instance.new("TextLabel", Header)
     Title.Size = UDim2.new(1, -70, 1, 0)
     Title.Position = UDim2.new(0, 10, 0, 0)
-    Title.Text = "CHRONOS V4.0 [LEGENDS]"
+    Title.Text = "CHRONOS V4.1 [ELITE]"
     Title.TextColor3 = Color3.new(1, 1, 1)
     Title.Font = Enum.Font.Code
     Title.TextSize = 14
@@ -270,19 +277,9 @@ local function BuildUI()
     PageKinetic.BackgroundTransparency = 1
     PageKinetic.Visible = true
 
-    local EBtn = Instance.new("TextButton", PageKinetic)
-    EBtn.Size = UDim2.new(1, -20, 0, 40)
-    EBtn.Position = UDim2.new(0, 10, 0, 10)
-    EBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    EBtn.Text = "EGOR DRIVE: OFF"
-    EBtn.TextColor3 = Color3.new(1, 1, 1)
-    EBtn.Font = Enum.Font.SourceSansBold
-    EBtn.ZIndex = 6
-    Instance.new("UICorner", EBtn)
-
     local FBtn = Instance.new("TextButton", PageKinetic)
     FBtn.Size = UDim2.new(1, -20, 0, 40)
-    FBtn.Position = UDim2.new(0, 10, 0, 60)
+    FBtn.Position = UDim2.new(0, 10, 0, 10)
     FBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     FBtn.Text = "MOBILE FLING: OFF"
     FBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -292,7 +289,7 @@ local function BuildUI()
     
     local VoidLabel = Instance.new("TextLabel", PageKinetic)
     VoidLabel.Size = UDim2.new(1, 0, 0, 20)
-    VoidLabel.Position = UDim2.new(0, 0, 0, 110)
+    VoidLabel.Position = UDim2.new(0, 0, 0, 60)
     VoidLabel.Text = "Void-Lock Protocol: ACTIVE"
     VoidLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
     VoidLabel.BackgroundTransparency = 1
@@ -309,28 +306,37 @@ local function BuildUI()
     OrbBtn.Size = UDim2.new(1, -20, 0, 35)
     OrbBtn.Position = UDim2.new(0, 10, 0, 10)
     OrbBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    OrbBtn.Text = "ORB-LINK: OFF"
+    OrbBtn.Text = "HYPER ORBS: OFF"
     OrbBtn.TextColor3 = Color3.new(1, 1, 1)
     OrbBtn.ZIndex = 6
     Instance.new("UICorner", OrbBtn)
 
-    local RebirthBtn = Instance.new("TextButton", PageLegends)
-    RebirthBtn.Size = UDim2.new(1, -20, 0, 35)
-    RebirthBtn.Position = UDim2.new(0, 10, 0, 55)
-    RebirthBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    RebirthBtn.Text = "AUTO-REBIRTH: OFF"
-    RebirthBtn.TextColor3 = Color3.new(1, 1, 1)
-    RebirthBtn.ZIndex = 6
-    Instance.new("UICorner", RebirthBtn)
+    local GemBtn = Instance.new("TextButton", PageLegends)
+    GemBtn.Size = UDim2.new(1, -20, 0, 35)
+    GemBtn.Position = UDim2.new(0, 10, 0, 55)
+    GemBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    GemBtn.Text = "AUTO-GEMS: OFF"
+    GemBtn.TextColor3 = Color3.new(1, 1, 1)
+    GemBtn.ZIndex = 6
+    Instance.new("UICorner", GemBtn)
 
     local HoopBtn = Instance.new("TextButton", PageLegends)
     HoopBtn.Size = UDim2.new(1, -20, 0, 35)
     HoopBtn.Position = UDim2.new(0, 10, 0, 100)
     HoopBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    HoopBtn.Text = "AUTO-HOOPS: OFF"
+    HoopBtn.Text = "OMNI-HOOPS: OFF"
     HoopBtn.TextColor3 = Color3.new(1, 1, 1)
-    HoopBtn.ZIndex = 6
+    GemBtn.ZIndex = 6
     Instance.new("UICorner", HoopBtn)
+
+    local RebirthBtn = Instance.new("TextButton", PageLegends)
+    RebirthBtn.Size = UDim2.new(1, -20, 0, 35)
+    RebirthBtn.Position = UDim2.new(0, 10, 0, 145)
+    RebirthBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    RebirthBtn.Text = "AUTO-REBIRTH: OFF"
+    RebirthBtn.TextColor3 = Color3.new(1, 1, 1)
+    RebirthBtn.ZIndex = 6
+    Instance.new("UICorner", RebirthBtn)
 
     -- // INTERACTIONS //
     -- Tab Switching
@@ -348,13 +354,6 @@ local function BuildUI()
     end)
 
     -- Kinetic Buttons
-    EBtn.MouseButton1Click:Connect(function()
-        CHRONOS_SETTINGS.EGOR_MODE = not CHRONOS_SETTINGS.EGOR_MODE
-        if not CHRONOS_SETTINGS.EGOR_MODE then FullReset() end
-        EBtn.Text = CHRONOS_SETTINGS.EGOR_MODE and "EGOR DRIVE: ON" or "EGOR DRIVE: OFF"
-        EBtn.TextColor3 = CHRONOS_SETTINGS.EGOR_MODE and CHRONOS_SETTINGS.ACCENT_COLOR or Color3.new(1, 1, 1)
-    end)
-
     FBtn.MouseButton1Click:Connect(function()
         CHRONOS_SETTINGS.FLING_MODE = not CHRONOS_SETTINGS.FLING_MODE
         ManageFling(CHRONOS_SETTINGS.FLING_MODE)
@@ -365,26 +364,32 @@ local function BuildUI()
     -- Legends Buttons
     OrbBtn.MouseButton1Click:Connect(function()
         CHRONOS_SETTINGS.AUTO_ORBS = not CHRONOS_SETTINGS.AUTO_ORBS
-        OrbBtn.Text = CHRONOS_SETTINGS.AUTO_ORBS and "ORB-LINK: ACTIVE" or "ORB-LINK: OFF"
+        OrbBtn.Text = CHRONOS_SETTINGS.AUTO_ORBS and "HYPER ORBS: ON" or "HYPER ORBS: OFF"
         OrbBtn.TextColor3 = CHRONOS_SETTINGS.AUTO_ORBS and CHRONOS_SETTINGS.ACCENT_COLOR or Color3.new(1, 1, 1)
+    end)
+
+    GemBtn.MouseButton1Click:Connect(function()
+        CHRONOS_SETTINGS.AUTO_GEMS = not CHRONOS_SETTINGS.AUTO_GEMS
+        GemBtn.Text = CHRONOS_SETTINGS.AUTO_GEMS and "AUTO-GEMS: ON" or "AUTO-GEMS: OFF"
+        GemBtn.TextColor3 = CHRONOS_SETTINGS.AUTO_GEMS and CHRONOS_SETTINGS.ACCENT_COLOR or Color3.new(1, 1, 1)
     end)
     
     RebirthBtn.MouseButton1Click:Connect(function()
         CHRONOS_SETTINGS.AUTO_REBIRTH = not CHRONOS_SETTINGS.AUTO_REBIRTH
-        RebirthBtn.Text = CHRONOS_SETTINGS.AUTO_REBIRTH and "AUTO-REBIRTH: ACTIVE" or "AUTO-REBIRTH: OFF"
+        RebirthBtn.Text = CHRONOS_SETTINGS.AUTO_REBIRTH and "AUTO-REBIRTH: ON" or "AUTO-REBIRTH: OFF"
         RebirthBtn.TextColor3 = CHRONOS_SETTINGS.AUTO_REBIRTH and CHRONOS_SETTINGS.ACCENT_COLOR or Color3.new(1, 1, 1)
     end)
     
     HoopBtn.MouseButton1Click:Connect(function()
         CHRONOS_SETTINGS.AUTO_HOOPS = not CHRONOS_SETTINGS.AUTO_HOOPS
-        HoopBtn.Text = CHRONOS_SETTINGS.AUTO_HOOPS and "AUTO-HOOPS: ACTIVE" or "AUTO-HOOPS: OFF"
+        HoopBtn.Text = CHRONOS_SETTINGS.AUTO_HOOPS and "OMNI-HOOPS: ON" or "OMNI-HOOPS: OFF"
         HoopBtn.TextColor3 = CHRONOS_SETTINGS.AUTO_HOOPS and CHRONOS_SETTINGS.ACCENT_COLOR or Color3.new(1, 1, 1)
     end)
 
     -- Rainbow & Window Logic
     task.spawn(function()
         while task.wait() and CHRONOS_SETTINGS.ACTIVE do
-            if CHRONOS_SETTINGS.EGOR_MODE or CHRONOS_SETTINGS.AUTO_ORBS then
+            if CHRONOS_SETTINGS.AUTO_ORBS or CHRONOS_SETTINGS.AUTO_GEMS then
                 UIStroke.Color = Color3.fromHSV(tick() % 5 / 5, 1, 1)
             else
                 UIStroke.Color = CHRONOS_SETTINGS.ACCENT_COLOR
@@ -394,7 +399,7 @@ local function BuildUI()
 
     MinBtn.MouseButton1Click:Connect(function()
         CHRONOS_SETTINGS.MINIMIZED = not CHRONOS_SETTINGS.MINIMIZED
-        local TargetSize = CHRONOS_SETTINGS.MINIMIZED and UDim2.new(0, 240, 0, 30) or UDim2.new(0, 240, 0, 220)
+        local TargetSize = CHRONOS_SETTINGS.MINIMIZED and UDim2.new(0, 240, 0, 30) or UDim2.new(0, 240, 0, 260)
         if CHRONOS_SETTINGS.MINIMIZED then Content.Visible = false TabContainer.Visible = false end
         local Tween = TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = TargetSize})
         Tween:Play()
@@ -431,8 +436,8 @@ local function BuildUI()
     end)
 end
 
--- // 7. RUNTIME (V4.0 LEGENDS ENGINE) //
-LegendsFarm() -- Initialize Legends Loop
+-- // 7. RUNTIME //
+LegendsFarm() 
 
 RunService.Heartbeat:Connect(function()
     if not Internal.CurrentRoot or not Internal.CurrentHum or not CHRONOS_SETTINGS.ACTIVE then return end
@@ -443,25 +448,6 @@ RunService.Heartbeat:Connect(function()
         Internal.CurrentRoot.Velocity = Vector3.new(0,0,0)
     end
     
-    if CHRONOS_SETTINGS.EGOR_MODE then
-        workspace.Gravity = CHRONOS_SETTINGS.MOON_GRAVITY
-        if Internal.CurrentHum.JumpPower ~= CHRONOS_SETTINGS.EGOR_JUMP_POWER then
-            Internal.CurrentHum.UseJumpPower = true
-            Internal.CurrentHum.JumpPower = CHRONOS_SETTINGS.EGOR_JUMP_POWER
-        end
-        if Internal.CurrentHum.MoveDirection.Magnitude > 0 then
-            Internal.CurrentHum.WalkSpeed = CHRONOS_SETTINGS.WALK_SPEED
-            local animator = Internal.CurrentHum:FindFirstChildOfClass("Animator")
-            if animator then
-                for _, t in pairs(animator:GetPlayingAnimationTracks()) do
-                    if t.Name:lower():find("run") or t.Name:lower():find("walk") or t.Name:lower():find("idle") then
-                        t:AdjustSpeed(CHRONOS_SETTINGS.ANIM_MULTIPLIER)
-                    end
-                end
-            end
-        end
-    end
-
     if CHRONOS_SETTINGS.FLING_MODE then
         Internal.CurrentRoot.RotVelocity = Vector3.new(0, CHRONOS_SETTINGS.FLING_STRENGTH, 0)
     end
