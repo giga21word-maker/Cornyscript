@@ -1,6 +1,7 @@
--- // CHRONOS SENTINEL V4.1 LEGENDS ELITE //
--- STATUS: Kinetic Core + Hyper-Legends Protocol + Tab System
--- FEATURES: Void-Lock, Mobile-Fling, Omni-Hoops, Gem-Sniper, Rebirth-Cycle
+-- // CHRONOS SENTINEL V4.2 [HYBRID] //
+-- STATUS: Kinetic Core + Hybrid-Legends Protocol + Centered UI
+-- FEATURES: Void-Lock, Mobile-Fling, Hybrid-Hoops, Gem-Sniper, Rebirth-Cycle
+-- [2026-01-18] GUI CENTERED | HOOPS MERGED
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -11,7 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
--- // 1. ELITE CONFIGURATION //
+-- // 1. CONFIGURATION //
 local CHRONOS_SETTINGS = {
     -- Kinetic Core
     FLING_MODE = false,
@@ -20,15 +21,14 @@ local CHRONOS_SETTINGS = {
     
     -- Legends Core
     AUTO_ORBS = false,
-    AUTO_GEMS = false, -- New Feature
+    AUTO_GEMS = false,
     AUTO_REBIRTH = false,
     AUTO_HOOPS = false,
-    FARM_SPEED = 0, -- Set to 0 for Hyper-Speed (Instant)
+    FARM_SPEED = 0, -- Hyper-Speed (Instant)
     
     -- UI State
     UI_OPEN = true,
     MINIMIZED = false,
-    CURRENT_TAB = "Movement", 
     ACCENT_COLOR = Color3.fromRGB(0, 255, 180),
     ACTIVE = true
 }
@@ -39,11 +39,10 @@ local Internal = {
     StartPos = nil,
     CurrentChar = nil,
     CurrentRoot = nil,
-    CurrentHum = nil,
-    InitialLoad = false
+    CurrentHum = nil
 }
 
--- // 2. THE LOADINGSTRING (FLETCHER) //
+-- // 2. THE LOADINGSTRING //
 if not _G.ChronosLoaded then 
     _G.ChronosLoaded = true
     task.spawn(function()
@@ -69,7 +68,6 @@ LocalPlayer.CharacterAdded:Connect(UpdateCharacterRefs)
 
 local function FullReset()
     workspace.Gravity = CHRONOS_SETTINGS.NORMAL_GRAVITY
-    -- Reset Legends Toggles
     CHRONOS_SETTINGS.AUTO_ORBS = false
     CHRONOS_SETTINGS.AUTO_GEMS = false
     CHRONOS_SETTINGS.AUTO_REBIRTH = false
@@ -111,7 +109,7 @@ local function ManageFling(state)
     end
 end
 
--- // 5. HYPER-LEGENDS PROTOCOLS //
+-- // 5. HYBRID LEGENDS PROTOCOLS //
 local function LegendsFarm()
     -- Hyper-Speed Orb Collector
     task.spawn(function()
@@ -130,7 +128,7 @@ local function LegendsFarm()
                     end
                 end
             end
-            task.wait(CHRONOS_SETTINGS.FARM_SPEED) -- Now runs effectively instantly
+            task.wait(CHRONOS_SETTINGS.FARM_SPEED)
         end
     end)
 
@@ -164,27 +162,43 @@ local function LegendsFarm()
         end
     end)
     
-    -- Omni-Hoop Collector (All Worlds)
+    -- Hybrid Hoop Collector (The Merge)
     task.spawn(function()
         while CHRONOS_SETTINGS.ACTIVE do
             if CHRONOS_SETTINGS.AUTO_HOOPS and Internal.CurrentRoot then
-                -- Scans entire workspace to find hoops in any folder
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if not CHRONOS_SETTINGS.AUTO_HOOPS then break end
-                    if obj.Name == "Hoop" or obj.Name == "Ring" then
-                         if obj:IsA("MeshPart") or obj:IsA("Part") then
-                             firetouchinterest(Internal.CurrentRoot, obj, 0)
-                             firetouchinterest(Internal.CurrentRoot, obj, 1)
-                         end
+                
+                -- 1. PRIMARY: The Old Way (Fast, Reliable, Specific Folder)
+                if workspace:FindFirstChild("Hoops") then
+                    for _, hoop in pairs(workspace.Hoops:GetChildren()) do
+                        if not CHRONOS_SETTINGS.AUTO_HOOPS then break end
+                        if hoop:IsA("MeshPart") or hoop:IsA("Part") then
+                             firetouchinterest(Internal.CurrentRoot, hoop, 0)
+                             firetouchinterest(Internal.CurrentRoot, hoop, 1)
+                        end
+                    end
+                end
+                
+                -- 2. SECONDARY: The New Way (Scans other folders carefully)
+                -- We check strictly for objects named "Hoop" or "Ring" in other places
+                -- without scanning the WHOLE workspace every frame (prevents lag)
+                local potentialContainers = {workspace:FindFirstChild("City"), workspace:FindFirstChild("Snow City")}
+                for _, container in pairs(potentialContainers) do
+                    if container then
+                        for _, obj in pairs(container:GetDescendants()) do
+                            if (obj.Name == "Hoop" or obj.Name == "Ring") and (obj:IsA("MeshPart") or obj:IsA("Part")) then
+                                firetouchinterest(Internal.CurrentRoot, obj, 0)
+                                firetouchinterest(Internal.CurrentRoot, obj, 1)
+                            end
+                        end
                     end
                 end
             end
-            task.wait(0.1) -- Fast scan
+            task.wait(0.1) -- Rapid tick
         end
     end)
 end
 
--- // 6. ELITE GUI (V4.1) //
+-- // 6. ELITE GUI (CENTERED) //
 local function BuildUI()
     if CoreGui:FindFirstChild("ChronosUltra") then CoreGui.ChronosUltra:Destroy() end
     
@@ -194,8 +208,11 @@ local function BuildUI()
 
     local Main = Instance.new("Frame", Screen)
     Main.Name = "Main"
-    Main.Size = UDim2.new(0, 240, 0, 260) -- Increased height for new buttons
-    Main.Position = UDim2.new(0.5, -120, 0.3, 0)
+    -- CENTER FIX: AnchorPoint 0.5, 0.5 puts the pivot in the middle of the frame
+    Main.AnchorPoint = Vector2.new(0.5, 0.5)
+    -- CENTER FIX: Position 0.5, 0, 0.5, 0 puts the frame in the exact middle of the screen
+    Main.Position = UDim2.new(0.5, 0, 0.5, 0) 
+    Main.Size = UDim2.new(0, 240, 0, 260)
     Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     Main.BorderSizePixel = 0
     Main.ClipsDescendants = true
@@ -215,7 +232,7 @@ local function BuildUI()
     local Title = Instance.new("TextLabel", Header)
     Title.Size = UDim2.new(1, -70, 1, 0)
     Title.Position = UDim2.new(0, 10, 0, 0)
-    Title.Text = "CHRONOS V4.1 [ELITE]"
+    Title.Text = "CHRONOS V4.2 [HYBRID]"
     Title.TextColor3 = Color3.new(1, 1, 1)
     Title.Font = Enum.Font.Code
     Title.TextSize = 14
@@ -324,7 +341,7 @@ local function BuildUI()
     HoopBtn.Size = UDim2.new(1, -20, 0, 35)
     HoopBtn.Position = UDim2.new(0, 10, 0, 100)
     HoopBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    HoopBtn.Text = "OMNI-HOOPS: OFF"
+    HoopBtn.Text = "HYBRID-HOOPS: OFF"
     HoopBtn.TextColor3 = Color3.new(1, 1, 1)
     GemBtn.ZIndex = 6
     Instance.new("UICorner", HoopBtn)
@@ -382,7 +399,7 @@ local function BuildUI()
     
     HoopBtn.MouseButton1Click:Connect(function()
         CHRONOS_SETTINGS.AUTO_HOOPS = not CHRONOS_SETTINGS.AUTO_HOOPS
-        HoopBtn.Text = CHRONOS_SETTINGS.AUTO_HOOPS and "OMNI-HOOPS: ON" or "OMNI-HOOPS: OFF"
+        HoopBtn.Text = CHRONOS_SETTINGS.AUTO_HOOPS and "HYBRID-HOOPS: ON" or "HYBRID-HOOPS: OFF"
         HoopBtn.TextColor3 = CHRONOS_SETTINGS.AUTO_HOOPS and CHRONOS_SETTINGS.ACCENT_COLOR or Color3.new(1, 1, 1)
     end)
 
